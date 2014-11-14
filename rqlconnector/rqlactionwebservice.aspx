@@ -8,7 +8,6 @@
 {
     public string SendRql(string Rql)
     {
-    	HttpContext.Current.Response.ContentType = "text/xml; charset=utf-8";
         return SendRqlToWebService(Rql);
     }
 
