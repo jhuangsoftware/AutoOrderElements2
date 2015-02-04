@@ -1,6 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
+<!DOCTYPE html>
 <head>
 	<meta http-equiv="expires" content="-1" />
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
@@ -16,173 +14,55 @@
 	</style>
 	<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
 	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/handlebars-v2.0.0.js"></script>
+	<script type="text/javascript" src="js/auto-order-elements-2.js"></script>
 	<script type="text/javascript" src="rqlconnector/Rqlconnector.js"></script>
+	<script id="template-content-class-elements" type="text/x-handlebars-template" data-container="#all" data-action="replace">
+		{{#each elements}}
+		<div data-guid="{{guid}}" data-name="{{name}}"><i class="icon-search"></i> {{name}}</div>
+		{{/each}}
+	</script>
+	<script id="template-content-class-template-elements" type="text/x-handlebars-template" data-container="#code" data-action="replace">
+		{{#each elements}}
+		<div>{{name}}</div>
+		{{/each}}
+	</script>
 	<script type="text/javascript">
 		var LoginGuid = '<%= session("loginguid") %>';
 		var SessionKey = '<%= session("sessionkey") %>';
+		var ContentClassGuid = '<%= session("TreeGuid") %>';
 		var RqlConnectorObj = new RqlConnector(LoginGuid, SessionKey);
 		
 		$(document).ready(function() { 
-			var ContentClassGuid = '<%= session("TreeGuid") %>';
-			LoadElementsInContentClass(ContentClassGuid);
-			LoadElementsInTemplate(ContentClassGuid);
-		
-			$('#reorder').click(function() { 
-				ReorderElements(ContentClassGuid);
-			});
-			
-			$('#reorderandclose').click(function() { 
-				ReorderElements(ContentClassGuid);
-				
-				$(document).ajaxStop(function() {
-					// close this window
-					window.opener.ReloadTreeSegment();
-					window.opener = '';
-					self.close();
-				});
-			});
-		}); 
-		
-		function LoadElementsInContentClass(ContentClassGuid)
-		{
-			var strRQLXML = '<PROJECT><TEMPLATE action="load" guid="' + ContentClassGuid + '"><ELEMENTS childnodesasattributes="0" action="load"/><TEMPLATEVARIANTS action="list"/></TEMPLATE></PROJECT>';
-			RqlConnectorObj.SendRql(strRQLXML, false, function(data){
-				$('#all .content').empty();
-				$(data).find('ELEMENT').each(function(){
-					$('#all .content').append('<div id="' + $(this).attr('guid') + '">' + $(this).attr('eltname') + '</div>');
-				});
-			});
-		}
-		
-		function LoadElementsInTemplate(ContentClassGuid)
-		{
-			var strRQLXML = '<PROJECT><TEMPLATE action="load" guid="' + ContentClassGuid + '"><TEMPLATEVARIANTS action="loadfirst"/></TEMPLATE></PROJECT>';
-			RqlConnectorObj.SendRql(strRQLXML, false, function(data){
-				$('#code .content').empty();
-				TemplateRegexp = new RegExp('<' + '%([_\-a-zA-Z0-9]+?)%' + '>', 'ig');
-				
-				var Match = null;
-				var TempItems = new Array();
-				while(Match = TemplateRegexp.exec($(data).text()))
-				{
-					FoundItemIndex = FindInArray(TempItems, Match[1]);
-					
-					if(FoundItemIndex == -1)
-					{
-						var Element = new Object();
-						Element.name = Match[1];
-						TempItems.push(Element);
-						
-						$('#code .content').append('<div>' + Match[1] + '</div>');
-					}
-				}
-			});
-		}
-	
-		function ReorderElements(ContentClassGuid)
-		{
-			$('#processing').modal('show');
-			
-			// transfer divs in all into an array
-			var TempItems = new Array();
-			$('#all .content div').each(
-			   function(){
-			   		var Element = new Object();
-			   		Element.name = $(this).text();
-			   		Element.guid = $(this).attr('id');
-					TempItems.push(Element);
-			   }
-			);
-
-			var FoundItemIndex = -1;
-			var ReorderedItems = new Array();
-			// according to template order, find items in code
-			$('#code .content div').each(
-				function(i){
-					FoundItemIndex = FindInArray(TempItems, $(this).text());
-					
-					if(FoundItemIndex != -1)
-					{
-						ReorderedItems.push(TempItems[FoundItemIndex]);
-						TempItems.splice(FoundItemIndex, 1);
-					}
-			   }
-			);
-			
-			// attached the left over items from TempItems to the end of ReorderedItems
-			ReorderedItems = ReorderedItems.concat(TempItems);
-
-			ExecuteReorderElementRql(ReorderedItems, ContentClassGuid);
-		}
-		
-		function ExecuteReorderElementRql(ElementArray, ContentClassGuid)
-		{
-			// covert ElementArray into partial RQL XML format
-			var strRQLInnerXML = '';
-			for(var i = 0; i < ElementArray.length; i++)
-			{
-				strRQLInnerXML += '<ELEMENT guid="' + ElementArray[i].guid + '" />';
-			}
-			
-			var strRQLXML = '<PROJECT><TEMPLATE guid="' + ContentClassGuid + '"><ELEMENTS action="sort">' + strRQLInnerXML + '</ELEMENTS></TEMPLATE></PROJECT>';
-			RqlConnectorObj.SendRql(strRQLXML, false, function(data){
-			
-				$('#processing').modal('hide');
-				location.reload();
-			});
-		}
-				
-		function FindInArray(SourceArray, SearchText)
-		{
-			var SearchPattern = new RegExp(SearchText,'gi');
-			var CurrentArrayItemText;
-			for(var i = 0; i < SourceArray.length; i++)
-			{
-				CurrentArrayItemText = SourceArray[i].name;
-				if(CurrentArrayItemText.length == SearchText.length)
-				{
-					if(CurrentArrayItemText.match(SearchPattern))
-					{
-						return i;
-					}
-				}
-			}
-			
-			return -1;
-		}
+			var AutoOrderElementsObj = new AutoOrderElements(RqlConnectorObj, ContentClassGuid);
+		});
 	</script>
 </head>
 <body>
-    <div class="alert alert-block alert-info">
-		<h4>Auto Order Elements</h4>
-		Reorder all elements according to order of appearance in code
-    </div>
-	<table class="table">
-		<tr>
-			<th>All Elements</th>
-			<th>Order of Elements in Code</th>
-		</tr>
-		<tr>
-			<td>
+	<div class="container">
+		<div class="alert alert-block alert-info">
+			<h4>Auto Order Elements</h4>
+			Reorder all elements according to order of appearance in code
+		</div>
+		<div class="row-fluid">
+			<div class="span6">
+				<span class="label label-warning">All Elements</span>
 				<div class="alert" id="all">
-					<div class="content">
-						Loading...
-					</div>
+					loading...
 				</div>
-			</td>
-			<td>
+			</div>
+			<div class="span6">
+				<span class="label label-success">Order of Elements in Code</span>
 				<div class="alert alert-success" id="code">
-					<div class="content">
-						Loading...
-					</div>
+					loading...
 				</div>
-			</td>
-		</tr>
-	</table>
-	<div class="form-actions">
-		<div class="pull-right">
-			<button class="btn btn-danger" id="reorderandclose">Reorder and Close</button>
-			<button class="btn btn-success" id="reorder">Reorder</button>
+			</div>
+		</div>
+		<div class="form-actions">
+			<div class="pull-right">
+				<div class="btn btn-danger" id="reorderandclose">Reorder and Close</div>
+				<div class="btn btn-success" id="reorder">Reorder</div>
+			</div>
 		</div>
 	</div>
 	<div id="processing" class="modal hide fade" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
