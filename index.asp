@@ -12,7 +12,7 @@
 			padding: 10px;
 		}
 	</style>
-	<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+	<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
 	<script type="text/javascript" src="js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="js/handlebars-v2.0.0.js"></script>
 	<script type="text/javascript" src="js/auto-order-elements-2.js"></script>
