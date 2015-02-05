@@ -5,10 +5,14 @@ function AutoOrderElements(RqlConnectorObj, ContentClassGuid) {
 	
 	this.TemplateContentClassElements = '#template-content-class-elements';
 	this.TemplateContentClassTemplateElements = '#template-content-class-template-elements';
-	this.TemplateProcessingDialog = '#processing';
+	this.TemplateProcessingModal = '#template-processing-modal';
+	this.TemplateDeleteModal = '#template-delete-modal';
 	
 	this.LoadElementsInContentClass(ContentClassGuid);
 	this.LoadElementsInContentClassTemplate(ContentClassGuid);
+	
+	var TemplateContentClassElementsContainer = $(this.TemplateContentClassElements).attr('data-container');
+	var TemplateDeleteModalContainer = $(ThisClass.TemplateDeleteModal).attr('data-container');
 	
 	$('body').on('click', '#reorderandclose', function(){
 		ThisClass.Reorder(ThisClass.ContentClassGuid, function(){
@@ -20,6 +24,25 @@ function AutoOrderElements(RqlConnectorObj, ContentClassGuid) {
 	
 	$('body').on('click', '#reorder', function(){
 		ThisClass.Reorder(ThisClass.ContentClassGuid, function(){
+			location.reload();
+		});
+	});
+	
+	$(TemplateContentClassElementsContainer).on('click', 'i', function(){
+		ElementObj = {
+			name: $(this).closest('div').attr('data-name'),
+			guid: $(this).closest('div').attr('data-guid')
+		}
+		
+		ThisClass.UpdateArea(ThisClass.TemplateDeleteModal, ElementObj);
+		
+		$(TemplateDeleteModalContainer).find('.modal').modal('show');
+	});
+	
+	$(TemplateDeleteModalContainer).on('click', '.delete', function(){
+		var ContentClassElementGuid = $(TemplateDeleteModalContainer).find('div[data-guid]').attr('data-guid');
+		
+		ThisClass.DeleteContentClassElement(ContentClassElementGuid, function(data){
 			location.reload();
 		});
 	});
@@ -81,7 +104,11 @@ AutoOrderElements.prototype.LoadElementsInContentClassTemplate = function(Conten
 
 AutoOrderElements.prototype.Reorder = function(ContentClassGuid, CallbackFunc){
 	var ThisClass = this;
-	$(this.TemplateProcessingDialog).modal('show');
+
+	var TemplateProcessingModalContainer = $(this.TemplateProcessingModal).attr('data-container');
+	this.UpdateArea(this.TemplateProcessingModal, {});
+
+	$(TemplateProcessingModalContainer).find('.modal').modal('show');
 
 	var TemplateContentClassElementsContainer = $(this.TemplateContentClassElements).attr('data-container');
 	var TemplateContentClassTemplateElementsContainer = $(this.TemplateContentClassTemplateElements).attr('data-container');
@@ -116,8 +143,26 @@ AutoOrderElements.prototype.Reorder = function(ContentClassGuid, CallbackFunc){
 
 	var RqlXml = '<PROJECT><TEMPLATE guid="' + ContentClassGuid + '"><ELEMENTS action="sort">' + RqlXmlInner + '</ELEMENTS></TEMPLATE></PROJECT>';
 	this.RqlConnectorObj.SendRql(RqlXml, false, function(data){
-		$(ThisClass.TemplateProcessingDialog).modal('hide');
+		$(TemplateProcessingModalContainer).find('.modal').modal('hide');
 		CallbackFunc();
+	});
+}
+
+AutoOrderElements.prototype.DeleteContentClassElement = function(ContentClassElementGuid, CallbackFunc) {
+	var ThisClass = this;
+	
+	var TemplateProcessingModalContainer = $(this.TemplateProcessingModal).attr('data-container');
+	this.UpdateArea(this.TemplateProcessingModal, {});
+
+	$(TemplateProcessingModalContainer).find('.modal').modal('show');
+	console.log($(TemplateProcessingModalContainer).find('.modal').length);
+	
+	var RqlXml = '<PROJECT><TEMPLATE><ELEMENT action="delete" deletereal="1" guid="' + ContentClassElementGuid + '" /></TEMPLATE></PROJECT>';
+
+	this.RqlConnectorObj.SendRql(RqlXml, false, function(data){
+		$(TemplateProcessingModalContainer).find('.modal').modal('hide');
+		
+		CallbackFunc(data);
 	});
 }
 
